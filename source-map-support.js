@@ -49,14 +49,20 @@ function handlerExec(list) {
   };
 }
 
-var retrieveFile = handlerExec(retrieveFileHandlers);
+var _retrieveFile = handlerExec(retrieveFileHandlers);
+
+var retrieveFile = function (path) {
+  if (path in fileContentsCache) {
+    return fileContentsCache[path];
+  }
+  var contents = _retrieveFile(path)
+  return fileContentsCache[path] = contents;
+}
+
 
 retrieveFileHandlers.push(function(path) {
   // Trim the path to make sure there is no extra whitespace.
   path = path.trim();
-  if (path in fileContentsCache) {
-    return fileContentsCache[path];
-  }
 
   try {
     // Use SJAX if we are in the browser
@@ -77,8 +83,7 @@ retrieveFileHandlers.push(function(path) {
   } catch (e) {
     var contents = null;
   }
-
-  return fileContentsCache[path] = contents;
+  return contents
 });
 
 // Support URLs relative to a directory, but be careful about a protocol prefix
@@ -368,12 +373,7 @@ function getErrorSource(error) {
     var column = +match[3];
 
     // Support the inline sourceContents inside the source map
-    var contents = fileContentsCache[source];
-
-    // Support files on disk
-    if (!contents && fs.existsSync(source)) {
-      contents = fs.readFileSync(source, 'utf8');
-    }
+    var contents = retrieveFile(source)
 
     // Format the line from the original source code like node does
     if (contents) {
